@@ -3,7 +3,6 @@ import React, { Component } from 'react'
 import { Square } from './Square'
 import { NodeDetails } from './NodeDetails'
 import { Actions } from './Actions'
-import { Graph } from '../../kraken-interactions/graph'
 import { NodeGraph } from './NodeGraph'
 import { NodeColorInfo } from '../settings/NodeColor'
 
@@ -12,7 +11,6 @@ interface NodeViewProps {
   cfgNode: Node | undefined
   dscNode: Node | undefined
   opened: () => void
-  graph: Graph | undefined
   colorInfo: NodeColorInfo
 }
 
@@ -34,6 +32,11 @@ export class NodeView extends Component<NodeViewProps, NodeViewState> {
   }
 
   graphToggle = () => {
+    if (this.state.graphOpen) {
+      console.log('closing graph')
+    } else {
+      console.log('opening graph')
+    }
     this.setState({
       graphOpen: !this.state.graphOpen,
     })
@@ -54,8 +57,12 @@ export class NodeView extends Component<NodeViewProps, NodeViewState> {
               <NodeDetails dscNode={this.props.dscNode} cfgNode={this.props.cfgNode} />
               <Actions dscNode={this.props.dscNode} cfgNode={this.props.cfgNode} graphToggle={this.graphToggle} />
             </div>
-            {this.props.graph !== undefined && Object.keys(this.props.graph).length !== 0 && (
-              <NodeGraph graph={this.props.graph} graphOpen={this.state.graphOpen} graphToggle={this.graphToggle} />
+            {this.props.dscNode.graph !== undefined && Object.keys(this.props.dscNode.graph).length !== 0 && (
+              <NodeGraph
+                graph={this.props.dscNode.graph}
+                graphOpen={this.state.graphOpen}
+                graphToggle={this.graphToggle}
+              />
             )}
           </React.Fragment>
         )}

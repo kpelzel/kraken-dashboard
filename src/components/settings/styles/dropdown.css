@@ -9,6 +9,7 @@
   background-position: right 8px center;
   background-color: var(--light-grey);
   background-size: 22px;
+  cursor: pointer;
   -webkit-appearance: none;
   -moz-appearance: none;
 }

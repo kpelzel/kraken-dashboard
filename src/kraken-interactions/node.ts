@@ -1,7 +1,8 @@
 import { fetchNodeListFromUrl, fetchAllNodesFromUrls } from './fetch'
-import { COLORS, cfgUrlSingle, dscUrlSingle } from '../config'
+import { COLORS, cfgUrlSingle } from '../config'
 import { cloneDeep } from 'lodash'
 import { NodeArea, NodeColorInfo, NodeColorInfoArea } from '../components/settings/NodeColor'
+import { Graph } from './graph'
 
 export type KrakenPhysState = 'PHYS_ERROR' | 'POWER_CYCLE' | 'PHYS_HANG' | 'POWER_OFF' | 'PHYS_UNKNOWN' | 'POWER_ON'
 
@@ -19,6 +20,7 @@ export interface Node {
   runState?: KrakenRunState
   extensions?: any[]
   services?: any[]
+  graph?: Graph
 }
 
 export interface WsMessage {
@@ -511,40 +513,20 @@ export const putNode = (url: string, data: Node, callback?: () => void) => {
 
 // Powers on a node
 export const powerOnNode = (cfgNode: Node) => {
-  cfgNode.runState = 'SYNC'
-  cfgNode.physState = 'POWER_ON'
+  const newNode = cloneDeep(cfgNode)
+  newNode.runState = 'SYNC'
+  newNode.physState = 'POWER_ON'
 
-  putNode(cfgUrlSingle, cfgNode)
+  putNode(cfgUrlSingle, newNode)
 }
 
 // Powers off a node
 export const powerOffNode = (cfgNode: Node, dscNode: Node) => {
-  cfgNode.physState = 'POWER_OFF'
-  cfgNode.runState = 'UNKNOWN'
-  if (cfgNode.extensions !== undefined) {
-    for (let i = 0; i < cfgNode.extensions.length; i++) {
-      if (cfgNode.extensions[i]['@type'] === 'type.googleapis.com/proto.PXE') {
-        cfgNode.extensions[i]['state'] = 'NONE'
-      } else if (cfgNode.extensions[i]['@type'] === 'type.googleapis.com/proto.RPi3') {
-        cfgNode.extensions[i]['pxe'] = 'NONE'
-      }
-    }
-  }
+  const newNode = cloneDeep(cfgNode)
+  newNode.physState = 'POWER_OFF'
+  newNode.runState = 'UNKNOWN'
 
-  dscNode.runState = 'UNKNOWN'
-  if (dscNode.extensions !== undefined) {
-    for (let i = 0; i < dscNode.extensions.length; i++) {
-      if (dscNode.extensions[i]['@type'] === 'type.googleapis.com/proto.PXE') {
-        dscNode.extensions[i]['state'] = 'NONE'
-      } else if (dscNode.extensions[i]['@type'] === 'type.googleapis.com/proto.RPi3') {
-        dscNode.extensions[i]['pxe'] = 'NONE'
-      }
-    }
-  }
-
-  putNode(dscUrlSingle, dscNode, () => {
-    putNode(cfgUrlSingle, cfgNode)
-  })
+  putNode(cfgUrlSingle, newNode)
 }
 
 export const mergeDSCandCFG = (cfgNode: Node, dscNode: Node): Node => {

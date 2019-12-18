@@ -72,6 +72,8 @@ export class NodeGraph extends Component<NodeGraphProps, NodeGraphState> {
         visibility: this.props.graphOpen ? 'visible' : 'hidden',
       },
     }
+
+    console.log('graph constructor')
   }
 
   componentDidMount() {

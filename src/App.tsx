@@ -28,7 +28,6 @@ import {
 import { LiveConnectionType } from './kraken-interactions/live'
 import { fetchJsonFromUrl } from './kraken-interactions/fetch'
 import { NodeView } from './components/nodeview/NodeView'
-import { Graph } from './kraken-interactions/graph'
 import { cloneDeep } from 'lodash'
 import {
   NodeColor,
@@ -38,6 +37,7 @@ import {
   NodeColorInfoArea,
 } from './components/settings/NodeColor'
 import { getStateData, NodeStateCategory } from './kraken-interactions/nodeStateOptions'
+import { Graph } from './kraken-interactions/graph'
 
 interface AppProps {}
 
@@ -52,7 +52,6 @@ interface AppState {
   dscMaster: Node
   dscNodes: Map<string, Node>
   updatingGraph: string | undefined
-  graph: Graph | undefined
   colorInfo: NodeColorInfo
   nodeStateOptions?: NodeStateCategory[]
 }
@@ -75,7 +74,6 @@ class App extends Component<AppProps, AppState> {
       dscMaster: {},
       liveConnectionActive: 'REFETCH',
       updatingGraph: undefined,
-      graph: undefined,
       colorInfo: defaultNodeColorInfo,
     }
   }
@@ -189,20 +187,45 @@ class App extends Component<AppProps, AppState> {
             dscNodes.computeNodes
           )
           if (valErr === null) {
-            let graphCallBack = undefined
             const graphNodeId = this.state.updatingGraph
             if (graphNodeId !== undefined) {
-              graphCallBack = () => {
-                this.getGraph(graphNodeId)
+              const node = dscNodes.computeNodes.get(graphNodeId)
+              if (node !== undefined) {
+                const newNode = cloneDeep(node)
+                fetchJsonFromUrl(graphUrlSingle(base64ToUuid(graphNodeId))).then(graph => {
+                  if (graph === null) {
+                    this.setFinalNodes(
+                      this.state.cfgMaster,
+                      this.state.cfgNodes,
+                      dscNodes.masterNode,
+                      dscNodes.computeNodes,
+                      () => {
+                        this.setState({
+                          liveConnectionActive: 'RECONNECT',
+                        })
+                      }
+                    )
+                    this.setState({
+                      liveConnectionActive: 'RECONNECT',
+                    })
+                  } else {
+                    if (dscNodes.computeNodes !== null) {
+                      newNode.graph = graph
+                      dscNodes.computeNodes.set(graphNodeId, newNode)
+                    }
+                  }
+                })
+              } else {
+                this.setFinalNodes(
+                  this.state.cfgMaster,
+                  this.state.cfgNodes,
+                  dscNodes.masterNode,
+                  dscNodes.computeNodes
+                )
               }
+            } else {
+              this.setFinalNodes(this.state.cfgMaster, this.state.cfgNodes, dscNodes.masterNode, dscNodes.computeNodes)
             }
-            this.setFinalNodes(
-              this.state.cfgMaster,
-              this.state.cfgNodes,
-              dscNodes.masterNode,
-              dscNodes.computeNodes,
-              graphCallBack
-            )
           } else {
             this.setState({
               liveConnectionActive: 'REFETCH',
@@ -292,8 +315,9 @@ class App extends Component<AppProps, AppState> {
     let dscUpdateHappened = false
     for (let i = 0; i < jsonData.length; i++) {
       if (jsonData[i].type === 1) {
-        // If it's a creation message, stop the loop and pull cfgNodes and dscNodes
+        // This is a state change event
         if (jsonData[i].data.includes('(CREATE)') || jsonData[i].data.includes('(CFG_UPDATE')) {
+          // If it's a creation message, stop the loop and pull cfgNodes and dscNodes
           console.log('Creation or update found. Close websocket and pull dsc and cfg nodes')
           this.setState({
             liveConnectionActive: 'REFETCH',
@@ -301,8 +325,9 @@ class App extends Component<AppProps, AppState> {
           break
         } else {
           const jsonMessage: WsMessage = jsonData[i]
-          // This is a physstate or runstate update
+
           if (jsonMessage.url === '/PhysState' || jsonMessage.url === '/RunState') {
+            // This is a physstate or runstate update
             const base64Id = uuidToBase64(jsonMessage.nodeid)
             const newNode = newNodes.get(base64Id)
             const newDscNode = newDscNodes.get(base64Id)
@@ -374,12 +399,8 @@ class App extends Component<AppProps, AppState> {
             }
           }
         }
-      } else if (
-        this.state.updatingGraph !== undefined &&
-        (jsonData[i].type === 2 || jsonData[i].type === 5) &&
-        jsonData[i].nodeid === base64ToUuid(this.state.updatingGraph).toLowerCase()
-      ) {
-        this.getGraph(this.state.updatingGraph)
+      } else if (jsonData[i].type === 2 || jsonData[i].type === 5) {
+        this.getGraph(uuidToBase64(jsonData[i].nodeid))
       }
     }
     if (dscUpdateHappened) {
@@ -562,19 +583,31 @@ class App extends Component<AppProps, AppState> {
     })
   }
 
-  getGraph = (uuid: string) => {
-    fetchJsonFromUrl(graphUrlSingle(base64ToUuid(uuid))).then(graph => {
-      if (graph === null) {
-        this.setState({
-          liveConnectionActive: 'RECONNECT',
-        })
-      } else {
-        this.setState({
-          graph: graph,
-        })
-      }
-    })
-  }
+  // getGraph = async (uuid: string): Promise<Graph | undefined> => {
+  //   fetchJsonFromUrl(graphUrlSingle(base64ToUuid(uuid))).then(graph => {
+  //     if (graph === null) {
+  //       this.setState({
+  //         liveConnectionActive: 'RECONNECT',
+  //       })
+  //       return undefined
+  //     } else {
+  //       return graph
+  //       // const node = this.state.dscNodes.get(uuid)
+  //       // if (node !== undefined) {
+  //       //   const newDscNodes = cloneDeep(this.state.dscNodes)
+  //       //   const newNode = cloneDeep(node)
+  //       //   newNode.graph = graph
+  //       //   newDscNodes.set(uuid, newNode)
+  //       //   this.setState({
+  //       //     dscNodes: newDscNodes,
+  //       //   })
+  //       // } else {
+  //       //   console.warn('could not find node for this graph?')
+  //       //   return undefined
+  //       // }
+  //     }
+  //   })
+  // }
 
   startUpdatingGraph = (uuid: string) => {
     this.setState({
@@ -585,7 +618,6 @@ class App extends Component<AppProps, AppState> {
   stopUpdatingGraph = () => {
     this.setState({
       updatingGraph: undefined,
-      graph: undefined,
     })
   }
 
@@ -681,7 +713,6 @@ class App extends Component<AppProps, AppState> {
                     this.startUpdatingGraph(uuidToBase64(props.match.params.uuid))
                   }
                 }}
-                graph={this.state.graph}
                 colorInfo={this.state.colorInfo}
               />
             )}
