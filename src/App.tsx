@@ -343,7 +343,6 @@ class App extends Component<AppProps, AppState> {
   }
 
   handleWebSocketMessage = (jsonData: WsMessage) => {
-    console.log('got websocket message: ', jsonData)
     if (jsonData.type === 1) {
       // If it's a creation message, stop the loop and pull cfgNodes and dscNodes
       if (jsonData.data.includes('(CREATE)') || jsonData.data.includes('(CFG_UPDATE')) {
