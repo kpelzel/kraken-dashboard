@@ -328,17 +328,22 @@ class App extends Component<AppProps, AppState> {
         }
       })
       .catch((reason: Error) => {
-        if (reason.message === 'The operation is insecure.') {
-          console.warn('Could not establish a websocket connection:', reason)
-          this.setState({
-            liveConnectionActive: 'RECONNECT',
-          })
-          return
+        console.log(reason.message)
+        switch (reason.message) {
+          case 'Internal Server Error':
+          case 'The operation is insecure.':
+            console.warn('Could not establish a websocket connection:', reason)
+            this.setState({
+              liveConnectionActive: 'RECONNECT',
+            })
+            return
+          default:
+            console.warn('Could not establish a websocket connection. Falling back to polling mode. Error:', reason)
+            this.setState({
+              useWebSocket: false,
+            })
+            break
         }
-        console.warn('Could not establish a websocket connection. Falling back to polling mode. Error:', reason)
-        this.setState({
-          useWebSocket: false,
-        })
       })
   }
 

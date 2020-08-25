@@ -28,10 +28,13 @@ export const fetchAllNodesFromUrls = async (cfgUrl: string, dscUrl: string): Pro
 // Fetches a json object from a url
 export const fetchJsonFromUrl = async (url: string): Promise<any | null> => {
   const data = await fetch(url).catch(error => {
-    // console.warn("Error during fetchJsonFromUrl:", error);
+    // console.warn('Error during fetchJsonFromUrl:', error)
     return null
   })
   if (data !== null) {
+    if (!data.ok) {
+      throw new Error(data.statusText)
+    }
     return data.json()
   } else {
     return null
