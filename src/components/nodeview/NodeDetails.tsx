@@ -35,6 +35,11 @@ export const NodeDetails = (props: NodeDetailsProps) => {
   const archRow = arch !== '' ? NodeDetailsRow('Architecture', 0, arch) : <React.Fragment />
   const platformRow = platform !== '' ? NodeDetailsRow('Platform', 0, platform) : <React.Fragment />
 
+  const busyState = props.dscNode.busy !== undefined ? props.dscNode.busy : ''
+  const frozenState = props.dscNode.frozen !== undefined ? props.dscNode.frozen : ''
+  const busyStateRow = NodeDetailsRow('Busy', 0, busyState)
+  const frozenStateRow = NodeDetailsRow('Frozen', 0, frozenState)
+
   const mergedNode = mergeDSCandCFG(props.cfgNode, props.dscNode)
   // Combine cfg and dsc node extensions (dsc takes priority)
   const mergedJsxExtensions = getExtSrvs(mergedNode.extensions, '@type')
@@ -57,6 +62,8 @@ export const NodeDetails = (props: NodeDetailsProps) => {
         {runStateRow}
         {archRow}
         {platformRow}
+        {busyStateRow}
+        {frozenStateRow}
       </div>
       <Tabs>
         <TabList>

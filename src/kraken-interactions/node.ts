@@ -4,8 +4,9 @@ import { cloneDeep } from 'lodash'
 import { NodeArea, NodeColorInfo, NodeColorInfoArea } from '../components/settings/NodeColor'
 
 export type KrakenPhysState = 'PHYS_ERROR' | 'POWER_CYCLE' | 'PHYS_HANG' | 'POWER_OFF' | 'PHYS_UNKNOWN' | 'POWER_ON'
-
 export type KrakenRunState = 'ERROR' | 'UNKNOWN' | 'INIT' | 'SYNC'
+export type KrakenBusyState = 'FREE' | 'BUSY'
+export type KrakenFrozenState = 'FROZEN' | 'NOT_FROZEN'
 
 export type DSCorCFG = 'DSC' | 'CFG'
 
@@ -19,6 +20,8 @@ export interface Node {
   runState?: KrakenRunState
   extensions?: any[]
   services?: any[]
+  busy?: KrakenBusyState
+  frozen?: KrakenFrozenState
 }
 
 export interface WsMessage {
